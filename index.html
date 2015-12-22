@@ -1,0 +1,132 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>ポモ子</title>
+  <script type="text/javascript" src="elm.js"></script>
+  <script type="text/javascript" src="pouchdb-4.0.1.min.js"></script>
+  <script type="text/javascript" src="Chart.min.js"></script>
+  <script type="text/javascript" src="underscore-min.js"></script>
+  <link href='https://fonts.googleapis.com/css?family=Nunito' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" type="text/css" href="app.css">
+</head>
+
+<body>
+</body>
+
+<script>
+// 地獄みたいになっているのでどうにかする
+
+var ipc = require('ipc');
+var db = new PouchDB('pomodoros');
+var remotedb = new PouchDB('http://127.0.0.1:5984/pomodoros');
+db.sync(remotedb);
+
+function putToDB(t) {
+    function pad(n){return n<10 ? '0'+n : n}
+    var date = new Date();
+    var y = date.getFullYear();
+    var m = date.getMonth() + 1;
+    var d = date.getDate();
+    var key = y + "-" + pad(m) + "-" + pad(d)
+
+    var data = {
+        time: t,
+        created_at: date.toISOString()
+    }
+
+    db.get(key).then(function (doc) {
+        doc.times.push(data);
+        db.put(doc).catch(function (err) {
+            console.log(err);
+        });
+    }).catch(function (err) {
+        if (err.status == 404) {
+            db.put({
+                _id: key,
+                times: [data],
+            }).catch(function (err) {
+                console.log(err);
+            });
+        } else {
+            console.log(err);
+        }
+    });
+    db.sync(remotedb);
+}
+
+function drawGraph () {
+    db.allDocs({
+        startkey: new Date().getFullYear()
+    }).then(function (result) {
+        var data = {
+            labels: [],
+            datasets: [
+                {
+                    label: "Pomoco Dataset",
+                    fillColor: "rgba(220,220,220,0.5)",
+                    strokeColor: "rgba(220,220,220,0.8)",
+                    highlightFill: "rgba(220,220,220,0.75)",
+                    highlightStroke: "rgba(220,220,220,1)",
+                    scaleFontColor: "#58E6BB",
+                    scaleFontFaily: "'Nunito', 'sans-serif'",
+                    data: []
+                }
+            ]
+        };
+
+        var ctx = document.getElementById("graph").getContext("2d");
+        var chart = new Chart(ctx).Line(data, {
+            scaleFontFaily: "'Nunito', 'sans-serif'",
+            bezierCurve : false,
+            scaleShowLabels: true,
+            scaleLabel: "<%=Math.round(value/60)%>",
+        });
+
+        result.rows.forEach(function (r) {
+            db.get(r.key).then(function (doc) {
+                var work_time = _.reduce(doc.times,
+                                         function(m, t) { return m + t.time; }, 0);
+                chart.addData([work_time], r.key);
+            });
+        });
+    });
+}
+
+
+var pomoco = Elm.fullscreen(Elm.Pomoco, {logDbLoadIn: []});
+pomoco.ports.timeStr.subscribe(function(time) {
+    if (time == "") {
+        document.title = "ポモ子";
+    } else {
+        document.title = "ポモ子 [" + time + "]";
+    }
+    ipc.send('time-message', time);
+});
+pomoco.ports.startButtonClickOut.subscribe(function(isClick) {
+    if (isClick && Notification && Notification.permission !== "granted") {
+        Notification.requestPermission(function (status) {
+            console.log(status);
+            if (Notification.permission !== status) {
+                Notification.permission = status;
+            }
+        });
+    }
+});
+pomoco.ports.timeOverSignalOut.subscribe(function(s) {
+    if (s) {
+        var n = new Notification("Hi!");
+        setTimeout(n.close.bind(n), 4000);
+    }
+});
+pomoco.ports.workingTimeSignalOut.subscribe(function(t) {
+    if (t == null) { return; }
+    putToDB(t);
+    drawGraph();
+});
+
+drawGraph();
+</script>
+
+</html>

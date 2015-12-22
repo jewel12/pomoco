@@ -1,0 +1,75 @@
+body {
+    margin: 0;
+    background-color: #F80035;
+}
+
+#main {
+    color: white;
+    font-family: 'Nunito', sans-serif;
+    width: 100%;
+}
+
+#remains {
+    color: white;
+    text-align: center;
+    width: 100%;
+}
+
+#timerText {
+    font-size: 100px;
+    width: 100%;
+    text-align: center;
+}
+
+#logView {
+    width: 100%;
+    text-align: center;
+}
+
+#status {
+    color: #FFFFFF;
+    background-color: #008F64;
+    font-family: 'Nunito', sans-serif;
+    width: 100%;
+    text-align: left;
+    margin: 0;
+    padding: 2px;
+    padding-left: 5px;
+    -webkit-app-region: drag;
+}
+
+.pausing {}
+
+.breaking {
+    /* color: #008F64; */
+}
+
+.button {
+    font-family: 'Nunito', sans-serif;
+    font-size: 20px;
+    width: 100px;
+    border: 2px solid;
+    background-color: #F80035;
+    border-radius: 10px;
+    outline: none;
+    color: white;
+    padding: 10px;
+    margin-right: 10px;
+    margin-left: 10px;
+    margin-bottom: 10px;
+}
+
+.button:hover {
+    background-color: #31c8aa;
+}
+
+#resumeButton {
+    color: #F80035;
+    background-color: white;
+}
+
+#resumeButton:hover {
+    color: white;
+    border-color: white;
+    background-color: #31c8aa;
+}
