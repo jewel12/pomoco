@@ -4,7 +4,7 @@ run:
 	electron .
 
 build:
-	elm-make elm/Pomoco.elm
+	elm-make elm/Pomoco.elm --output elm.js
 
 install:
 	npm install
