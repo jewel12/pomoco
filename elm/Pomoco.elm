@@ -74,31 +74,31 @@ update : Action -> State -> State
 update action state =
     case action of
       Start ->
-          { state| timer <- (updateTimerStatus state.timer Working) }
+          { state| timer = (updateTimerStatus state.timer Working) }
 
       Pause ->
-          { state| timer <-
+          { state| timer =
                 (updateTimerStatus state.timer (PauseStatus state.timer.status)) }
 
       Resume ->
-          { state| timer <-
+          { state| timer =
                 (updateTimerStatus state.timer (resumeStatus state.timer)) }
 
       NextStatus ->
-          { state| timer <- (nextTimer state.timer) }
+          { state| timer = (nextTimer state.timer) }
 
       Count ->
           case running state.timer of
             True -> case (timeOver state.timer) of
                    True ->
-                       { state| timer <- (nextTimer state.timer) }
+                       { state| timer = (nextTimer state.timer) }
 
                    False ->
-                       { state| timer <- (addTimerElapsed state.timer 1) }
+                       { state| timer = (addTimerElapsed state.timer 1) }
 
             False -> state
 
-      SetInterval target s -> { state| timer <- updateTimerInterval state.timer target s}
+      SetInterval target s -> { state| timer = updateTimerInterval state.timer target s}
 
       _ -> state
 
@@ -110,7 +110,7 @@ running t =
       _ -> True
 
 updateTimerStatus : Timer -> TimerStatus -> Timer
-updateTimerStatus t a = { t| status <- a }
+updateTimerStatus t a = { t| status = a }
 
 updateTimerInterval : Timer -> TimerStatus -> Sec -> Timer
 updateTimerInterval t ts s =
@@ -118,19 +118,20 @@ updateTimerInterval t ts s =
                       Working -> updateWorkingInterval
                       ShortBreak -> updateShortBreakInterval
                       LongBreak -> updateLongBreakInterval
-    in { t| interval <- updateF t.interval s }
+                      _ -> (\interval _ -> interval)
+    in { t| interval = updateF t.interval s }
 
 updateWorkingInterval : IntervalSetting -> Sec -> IntervalSetting
-updateWorkingInterval interval s = { interval| working <- (minutes s) }
+updateWorkingInterval interval s = { interval| working = (minutes s) }
 
 updateShortBreakInterval : IntervalSetting -> Sec -> IntervalSetting
-updateShortBreakInterval interval s = { interval| shortBreak <- (minutes s) }
+updateShortBreakInterval interval s = { interval| shortBreak = (minutes s) }
 
 updateLongBreakInterval : IntervalSetting -> Sec -> IntervalSetting
-updateLongBreakInterval interval s = { interval| longBreak <- (minutes s) }
+updateLongBreakInterval interval s = { interval| longBreak = (minutes s) }
 
 addTimerElapsed : Timer -> Sec -> Timer
-addTimerElapsed t s = { t| elapsed <- t.elapsed + s }
+addTimerElapsed t s = { t| elapsed = t.elapsed + s }
 
 resumeStatus : Timer -> TimerStatus
 resumeStatus t = case t.status of
@@ -157,9 +158,9 @@ nextTimer t =
                  _ -> nextStatus t
     in
       { t|
-        status <- next
-      , elapsed <- 0
-      , pomodoros <- case next of
+        status = next
+      , elapsed = 0
+      , pomodoros = case next of
                        LongBreak -> 1
                        Working -> t.pomodoros + 1
                        _ -> t.pomodoros
@@ -189,39 +190,39 @@ signals : Signal Action
 signals =
     Signal.mergeMany
               [ actions.signal
-              , (always Count) <~ (every second)
+              , map (always Count) (every second)
               , logDbLoad
               ]
 
 timerSignal : Signal Timer
-timerSignal = (\s -> s.timer) <~ status
+timerSignal = map (\s -> s.timer) status
 
 timeOverSignal : Signal Bool
-timeOverSignal = timeOver <~ timerSignal
+timeOverSignal = map timeOver timerSignal
 
 workingTimeOverSignal : Signal Bool
 workingTimeOverSignal =
-    Signal.dropRepeats (workingTimeOver <~ timerSignal)
+    Signal.dropRepeats (map workingTimeOver timerSignal)
 
 workingTimeOver : Timer -> Bool
 workingTimeOver t = t.status == Working && timeOver t
 
 workingTimeSignal : Signal (Maybe Int)
 workingTimeSignal =
-    Signal.dropRepeats ((\t -> case workingTimeOver t of
+    Signal.dropRepeats (map (\t -> case workingTimeOver t of
                                  True -> Just t.interval.working
                                  False -> Nothing
-                        ) <~ timerSignal)
+                        ) timerSignal)
 
 logDbLoad : Signal Action
-logDbLoad = LogDBLoad <~ logDbLoadIn
+logDbLoad = map LogDBLoad logDbLoadIn
 
 actions : Signal.Mailbox Action
 actions =
     Signal.mailbox NoOp
 
 startButtonClick : Signal Bool
-startButtonClick = (==) Start <~ actions.signal
+startButtonClick = map ((==) Start) actions.signal
 
 {---- Views ----}
 view : Address Action -> State -> Html
@@ -298,18 +299,18 @@ logView log =
 
 {---- Main ----}
 main =
-    (view actions.address) <~ status
+    map (view actions.address) status
 
 {---- Ports ----}
 port timeStr : Signal String
 port timeStr =
-    (\t ->
+    map (\t ->
          let r = remainSec t
          in
            case r of
              0 -> ""
              _ -> timeFormat r
-    ) <~ timerSignal
+    ) timerSignal
 
 port startButtonClickOut : Signal Bool
 port startButtonClickOut = startButtonClick
