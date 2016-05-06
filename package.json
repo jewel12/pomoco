@@ -1,5 +1,8 @@
 {
   "name": "pomoco",
   "version": "0.1.0",
-  "main": "app.js"
+  "main": "app.js",
+  "devDependencies": {
+    "electron-packager": "^7.0.1"
+  }
 }
